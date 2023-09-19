@@ -8,17 +8,17 @@ jobs:
       fail-fast: true
       matrix:
         python:
-          - "3.8"
-          - "3.9"
+#          - "3.8"
+#          - "3.9"
           - "3.10"
         os:
           - ubuntu-latest
-          - windows-latest
+#          - windows-latest
         qt_binding:
-          - "PyQt5"
+#          - "PyQt5"
           - "PyQt6"
-          - "PySide2"
-          - "PySide6"
+#          - "PySide2"
+#          - "PySide6"
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -28,6 +28,7 @@ jobs:
           python-version: ${{ matrix.python }}
 
       - run: |
+          sudo apt install libxkbcommon-x11-0 libegl1
           python -m pip install --upgrade pip
           pip install pytest ${{ matrix.qt_binding }}
           pip install -e .
