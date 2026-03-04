@@ -56,7 +56,9 @@ jobs:
       - name: Upload code coverage
         if: matrix.python == '3.13' && matrix.os == 'ubuntu-latest'
         # Upload needs to be done only once
-        uses: coverallsapp/github-action@v2
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   deploy:
     needs: [build_and_test, linting]
