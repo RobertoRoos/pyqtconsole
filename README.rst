@@ -1,7 +1,7 @@
 pyqtconsole
 ===========
 
-|Python| |PyPi| |Conda| |License| |Tests|
+|Python| |PyPi| |Conda| |License| |Tests| |Coverage|
 
 pyqtconsole is a lightweight python console for Qt applications. It's made to
 be easy to embed in other Qt applications and comes with some examples that
@@ -177,9 +177,13 @@ Qt4 and Qt5. The console is tested under both Qt4 and Qt5.
    :target:             https://github.com/pyqtconsole/pyqtconsole/blob/master/LICENSE
    :alt:                License: MIT
 
-.. |Tests| image::      https://github.com/pyqtconsole/pyqtconsole/workflows/Tests/badge.svg
-   :target:             https://github.com/pyqtconsole/pyqtconsole/actions?query=Tests
-   :alt:                Test status
+.. |Tests| image::      https://github.com/pyqtconsole/pyqtconsole/actions/workflows/tests.yml/badge.svg
+   :target:             https://github.com/pyqtconsole/pyqtconsole/actions/workflows/tests.yml
+   :alt:                Tests status
+
+.. |Coverage| image::   https://coveralls.io/repos/github/pyqtconsole/pyqtconsole/badge.svg
+   :target:             https://coveralls.io/github/pyqtconsole/pyqtconsole
+   :alt:                Coverage
 
 .. |Conda| image::      https://img.shields.io/conda/vn/conda-forge/pyqtconsole.svg
    :target:             https://anaconda.org/conda-forge/pyqtconsole
