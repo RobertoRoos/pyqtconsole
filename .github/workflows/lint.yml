@@ -1,0 +1,22 @@
+#
+# Test the source for formatting and code check (pass/fail).
+#
+
+name: Linting
+
+on: [push, pull_request]
+
+jobs:
+
+  linting:
+    runs-on: ubuntu-latest
+    name: Ruff code check
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: pip install ruff
+      - run: |
+          ruff format --check
+          ruff check
