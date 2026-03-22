@@ -1,0 +1,39 @@
+#
+# This workflow will install the package and run the unittests.
+#
+
+name: PyTest tests
+
+on: [push, pull_request]
+
+jobs:
+
+  tests:
+
+    strategy:
+      fail-fast: true
+      matrix:
+        python: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+        os: [ubuntu-latest]
+        include:
+          - os: macos-latest
+            python: "3.13"
+          - os: windows-latest
+            python: "3.13"
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
+      with:
+        python-version: ${{matrix.python-version}}
+
+    - run: pip install pytest pyside6
+    - run: pip install -e .
+
+    - name: Install Qt system dependencies
+      if: matrix.os == 'ubuntu-latest'
+      run: sudo apt-get update && sudo apt-get install -y libegl1
+
+    - run: pytest

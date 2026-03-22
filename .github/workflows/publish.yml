@@ -1,0 +1,41 @@
+#
+# This workflow will build the Python wheel and upload it to PyPi
+# It is triggered when a release has been created, which must be done manually after creating a new tag
+#
+# We have no platform-specific dependencies, so there is only a single "py3-none-any" binary wheel
+# and the source-package.
+#
+
+name: Deploy to PyPi
+
+on:
+  release:
+    types: [created]
+
+  # Also allow running the workflow manually:
+  workflow_dispatch:
+
+jobs:
+
+  deploy:
+    runs-on: ubuntu-latest
+
+    environment:
+      name: pypi
+
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - run: pip install build
+
+      # Build the wheel-dist and source-dist:
+      - run: python -m build
+
+      # PyPi authentication is done through a trusted publisher and a Github environment:
+      - uses: pypa/gh-action-pypi-publish@release/v1
