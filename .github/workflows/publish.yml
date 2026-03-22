@@ -1,5 +1,6 @@
 #
 # This workflow will build the Python wheel and upload it to PyPi
+# It is triggered when a release has been created, which must be done manually after creating a new tag
 #
 # We have no platform-specific dependencies, so there is only a single "py3-none-any" binary wheel
 # and the source-package.
@@ -8,8 +9,11 @@
 name: Deploy to PyPi
 
 on:
-  push:
-    tags: [ 'v*' ]
+  release:
+    types: [created]
+
+  # Also allow running the workflow manually:
+  workflow_dispatch:
 
 jobs:
 
