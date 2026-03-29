@@ -1,22 +1,17 @@
 from collections.abc import Generator
 
 import pytest
-from pytestqt.qtbot import QtBot
 from qtpy.QtCore import Qt
 
 from pyqtconsole.console import PythonConsole
 
+from utils import QtTestCase
 
-class TestConsole:
+
+class TestConsole(QtTestCase):
     """A collection of integration tests, directly on the console."""
 
-    bot: QtBot
     console: PythonConsole
-
-    @pytest.fixture(autouse=True)
-    def _qt_bot(self, qtbot):
-        """Automatically include qtbot for all test-methods."""
-        self.bot = qtbot
 
     @pytest.fixture(autouse=True)
     def _console(self, _qt_bot) -> Generator[PythonConsole, None, None]:
