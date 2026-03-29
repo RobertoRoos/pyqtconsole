@@ -143,6 +143,9 @@ class PythonHighlighter(QSyntaxHighlighter):
 
     def highlightBlock(self, text: str) -> None:
         """Callback from QSyntextHighlighter to format some text."""
+        if isinstance(self.currentBlockUserData(), NoHighlightData):
+            return  # No formatting at all here
+
         # We rely on `get_tokens_unprocessed()`, because that one also passes along
         # the string position, unlike the intended entrypoint `pygments.highlight()`.
         for idx, token_type, content in self.lexer.get_tokens_unprocessed(text):

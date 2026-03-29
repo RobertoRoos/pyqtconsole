@@ -2,11 +2,11 @@ from collections.abc import Generator
 
 import pytest
 from pygments.token import Token
-from qtpy.QtGui import QTextLayout
+from qtpy.QtGui import QTextCursor, QTextLayout
 from qtpy.QtWidgets import QPlainTextEdit
 from utils import QtTestCase
 
-from pyqtconsole.highlighter import PythonHighlighter
+from pyqtconsole.highlighter import NoHighlightData, PythonHighlighter
 
 
 class TestHighlighting(QtTestCase):
@@ -130,3 +130,31 @@ outcome = test(5)""")
             assert actual_formats == expected_formats
 
         self.bot.waitUntil(check)
+
+    def test_no_highlighting(self):
+        """Test the exception class."""
+
+        message = "'happy' return to Python!"
+
+        cursor = self.text_edit.textCursor()
+        cursor.movePosition(QTextCursor.End)
+        block = cursor.block()
+        block.setUserData(NoHighlightData())
+        cursor.insertText(message)
+
+        with self.bot.waitExposed(self.text_edit):
+            pass
+
+        def check_1():
+            fmt_ranges = [len(layout.formats()) for layout in self.get_doc_layouts()]
+            assert fmt_ranges == [0]
+
+        self.bot.waitUntil(check_1)
+
+        self.text_edit.appendPlainText("print('Hello World!')")
+
+        def check_2():
+            fmt_ranges = [len(layout.formats()) for layout in self.get_doc_layouts()]
+            assert fmt_ranges == [0, 2]
+
+        self.bot.waitUntil(check_2)

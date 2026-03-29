@@ -148,7 +148,7 @@ class BaseConsole(QFrame):
         self.auto_complete = jedi and AutoComplete(self)
 
         # Store welcome message to be displayed by subclass if needed
-        self._welcome_message = welcome_message
+        self._welcome_message: str | None = welcome_message
 
         self._show_ps()
 
@@ -510,28 +510,22 @@ class BaseConsole(QFrame):
 
         # Insert the welcome message line by line, marking each block
         # to prevent syntax highlighting
-        lines = self._welcome_message.split("\n")
-        for i, line in enumerate(lines):
-            if i > 0:
-                cursor.insertText("\n")
-            cursor.insertText(line)
-            # Mark this block to not be highlighted
-            block = cursor.block()
-            block.setUserData(NoHighlightData())
+        lines = self._welcome_message.splitlines()
+        if lines[-1]:
+            lines.append("")  # If the last line is not empty, add one ourselves
 
-        # Add final newline if message doesn't end with one
-        if not self._welcome_message.endswith("\n"):
-            cursor.insertText("\n")
-            block = cursor.block()
-            block.setUserData(NoHighlightData())
+        for line in lines:
+            # Mark this block to not be highlighted:
+            cursor.block().setUserData(NoHighlightData())
+            cursor.insertText(line)
+            cursor.insertText("\n")  # Force a line break
 
         self._prompt_pos = cursor.position()
 
         # Update prompt area for the welcome message lines
         # Insert empty strings for each line of the welcome message
-        newline_count = self._welcome_message.count("\n")
-        if not self._welcome_message.endswith("\n"):
-            newline_count += 1
+        newline_count = len(lines)
+
         self._insert_prompt_text("\n" * newline_count)
 
         self._output_inserted = True
