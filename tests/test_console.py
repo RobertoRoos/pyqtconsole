@@ -2,10 +2,9 @@ from collections.abc import Generator
 
 import pytest
 from qtpy.QtCore import Qt
+from utils import QtTestCase
 
 from pyqtconsole.console import PythonConsole
-
-from utils import QtTestCase
 
 
 class TestConsole(QtTestCase):

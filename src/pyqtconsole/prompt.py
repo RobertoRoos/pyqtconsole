@@ -57,12 +57,12 @@ class PromptArea(QWidget):
         formats = [default] * len(text)
         painter.setFont(self.edit.font())
 
-        for index, length, format in self.highlighter.highlight(text):
-            formats[index : index + length] = [format] * length
+        for index, length, fmt in self.highlighter.highlight(text):
+            formats[index : index + length] = [fmt] * length
 
-        for idx, (_char, format) in enumerate(zip(text, formats)):
+        for idx, (_char, fmt) in enumerate(zip(text, formats)):
             rpos = len(text) - idx - 1
-            pen.setColor(format.foreground().color())
+            pen.setColor(fmt.foreground().color())
             painter.setPen(pen)
             painter.drawText(rect, Qt.AlignRight, text[idx] + " " * rpos)
 

@@ -1,12 +1,12 @@
 from collections.abc import Generator
 
 import pytest
+from pygments.token import Token
+from qtpy.QtGui import QTextLayout
 from qtpy.QtWidgets import QPlainTextEdit
-from qtpy.QtGui import QTextDocument, QTextLayout
+from utils import QtTestCase
 
 from pyqtconsole.highlighter import PythonHighlighter
-
-from utils import QtTestCase
 
 
 class TestHighlighting(QtTestCase):
@@ -38,9 +38,7 @@ class TestHighlighting(QtTestCase):
 
     @pytest.fixture(autouse=True)
     def _highlighter(self, _text_edit):
-        self.highlighter = PythonHighlighter(
-            self.text_edit.document()
-        )
+        self.highlighter = PythonHighlighter(self.text_edit.document())
         yield self.highlighter
 
     def get_doc_layouts(self) -> Generator[QTextLayout, None, None]:
@@ -64,19 +62,17 @@ def test(my_arg: int = 0):
     my_variable = my_arg + 420
     return my_variable
 
-outcome = test(5)
-        """)
+outcome = test(5)""")
 
         expected_format_ranges = [
-            (17, ),  # <comment>
-            (3, 4, 3, 1, 1), # def + test + int + '=' + 0
-            (14, ),  # <comment>
+            (17,),  # <comment>
+            (3, 4, 3, 1, 1),  # def + test + int + '=' + 0
+            (14,),  # <comment>
             (1, 13),  # '=' + "hello world"
             (1, 1, 3),  # '=' + '+' + 420
-            (6, ),  # return
+            (6,),  # return
             (),
             (1, 1),  # '=' + 5
-            (),
         ]
 
         with self.bot.waitExposed(self.text_edit):
@@ -88,5 +84,49 @@ outcome = test(5)
                 for layout in self.get_doc_layouts()
             ]
             assert actual_ranges == expected_format_ranges
+
+        self.bot.waitUntil(check)
+
+    def test_format_group(self):
+        """Test the formatting rules exactly."""
+
+        content = 'return 99 + my_var + str("1234")'
+        self.text_edit.setPlainText(content)
+
+        with self.bot.waitExposed(self.text_edit):
+            pass
+
+        qt_styles = self.highlighter.formatter.qt_styles
+
+        def breakup_qt_format(fmt):
+            """QCharTextFormat instances cannot be well compared, break them up here."""
+            return (
+                fmt.foreground().color().name(),
+                fmt.fontItalic(),
+                fmt.fontWeight(),
+            )
+
+        expected_formats_raw = [
+            ("return", qt_styles[Token.Keyword]),
+            ("99", qt_styles[Token.Literal.Number.Integer]),
+            ("+", qt_styles[Token.Operator]),
+            ("+", qt_styles[Token.Operator]),
+            ("str", qt_styles[Token.Name.Builtin]),
+            ('"1234"', qt_styles[Token.Literal.String.Double]),
+        ]
+        expected_formats = [
+            (txt, breakup_qt_format(style)) for txt, style in expected_formats_raw
+        ]
+
+        def check():
+            layout = next(self.get_doc_layouts())
+            actual_formats = [
+                (
+                    content[fmt.start : (fmt.start + fmt.length)],
+                    breakup_qt_format(fmt.format),
+                )
+                for fmt in layout.formats()
+            ]
+            assert actual_formats == expected_formats
 
         self.bot.waitUntil(check)

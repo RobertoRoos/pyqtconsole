@@ -74,7 +74,11 @@ class BaseConsole(QFrame):
 
         self.edit = edit = InputArea()
         self.pbar = pbar = PromptArea(
-            edit, self._get_prompt_text, PromptHighlighter(formats=formats)
+            edit,
+            self._get_prompt_text,
+            PromptHighlighter(
+                # formats=formats
+            ),
         )
 
         layout = QHBoxLayout()
