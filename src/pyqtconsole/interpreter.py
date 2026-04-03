@@ -9,7 +9,7 @@ from qtpy.QtCore import QObject, Signal, Slot
 
 class PythonInterpreter(QObject, InteractiveInterpreter):
     exec_signal = Signal(object)
-    done_signal = Signal(bool, object)
+    done_signal = Signal(bool, object)  # args: "executed, result"
     exit_signal = Signal(object)
 
     def __init__(self, stdin, stdout, locals=None):

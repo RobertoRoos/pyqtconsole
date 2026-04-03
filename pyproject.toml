@@ -56,3 +56,6 @@ select = [
     "SIM",  # flake8-simplify
     "I",  # isort
 ]
+
+[tool.pytest]
+markers = ["no_console: Mark with this to disable an automatic console instance"]
