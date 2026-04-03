@@ -9,7 +9,11 @@ from qtpy.QtWidgets import QApplication, QFrame, QHBoxLayout, QPlainTextEdit
 
 from .autocomplete import COMPLETE_MODE, AutoComplete
 from .commandhistory import CommandHistory
-from .highlighter import NoHighlightData, PromptHighlighter, PythonHighlighter
+from .highlighter import (
+    HighlightKind,
+    PromptHighlighter,
+    PythonHighlighter,
+)
 from .interpreter import PythonInterpreter
 from .prompt import PromptArea
 from .stream import Stream
@@ -475,6 +479,7 @@ class BaseConsole(QFrame):
 
         cursor = self._textCursor()
         cursor.movePosition(QTextCursor.End)
+        HighlightKind.PLAIN.add_as_user_data(cursor)
         cursor.insertText(text)
         self._prompt_pos = cursor.position()
         self.ensureCursorVisible()
@@ -516,7 +521,7 @@ class BaseConsole(QFrame):
 
         for line in lines:
             # Mark this block to not be highlighted:
-            cursor.block().setUserData(NoHighlightData())
+            HighlightKind.PLAIN.add_as_user_data(cursor)
             cursor.insertText(line)
             cursor.insertText("\n")  # Force a line break
 

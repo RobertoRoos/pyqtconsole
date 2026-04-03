@@ -1,5 +1,6 @@
 import re
 from collections.abc import Generator
+from enum import Enum
 from typing import Any
 
 from pygments.formatter import Formatter
@@ -12,6 +13,7 @@ from qtpy.QtGui import (
     QSyntaxHighlighter,
     QTextBlockUserData,
     QTextCharFormat,
+    QTextCursor,
     QTextDocument,
 )
 
@@ -19,10 +21,29 @@ StyleDict = dict[_TokenType, Any]
 QtStyleDict = dict[_TokenType, QTextCharFormat]
 
 
-class NoHighlightData(QTextBlockUserData):
-    """User data to mark blocks that should not be syntax highlighted."""
+class HighlightKind(Enum):
+    """Mark text for the highlighter in a particular way."""
 
-    pass
+    REGULAR = 0
+    PLAIN = 1
+    ERROR = 2
+
+    @property
+    def user_data(self) -> "HighlightUserData":
+        """Make instance of custom userdata from this enum."""
+        return HighlightUserData(self)
+
+    def add_as_user_data(self, cursor: QTextCursor) -> None:
+        """Insert an instance of this user-data into a cursor."""
+        cursor.block().setUserData(self.user_data)
+
+
+class HighlightUserData(QTextBlockUserData):
+    """Custom text meta-data for QSyntaxHighlighter."""
+
+    def __init__(self, kind: HighlightKind):
+        super().__init__()
+        self.kind = kind
 
 
 class QtFormatter(Formatter):
@@ -143,7 +164,10 @@ class PythonHighlighter(QSyntaxHighlighter):
 
     def highlightBlock(self, text: str) -> None:
         """Callback from QSyntextHighlighter to format some text."""
-        if isinstance(self.currentBlockUserData(), NoHighlightData):
+        if (
+            isinstance(user_data := self.currentBlockUserData(), HighlightUserData)
+            and user_data.kind == HighlightKind.PLAIN
+        ):
             return  # No formatting at all here
 
         # We rely on `get_tokens_unprocessed()`, because that one also passes along

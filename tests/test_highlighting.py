@@ -6,7 +6,7 @@ from qtpy.QtGui import QTextCursor, QTextLayout
 from qtpy.QtWidgets import QPlainTextEdit
 from utils import QtTestCase
 
-from pyqtconsole.highlighter import NoHighlightData, PythonHighlighter
+from pyqtconsole.highlighter import HighlightKind, PythonHighlighter
 
 
 class TestHighlighting(QtTestCase):
@@ -41,16 +41,9 @@ class TestHighlighting(QtTestCase):
         self.highlighter = PythonHighlighter(self.text_edit.document())
         yield self.highlighter
 
-    def get_doc_layouts(self) -> Generator[QTextLayout, None, None]:
-        """The best way to retrieve formatting results.
-
-        We retrieve layout blocks (typically one per line). Each layout consists
-        for format ranges.
-        """
-        block = self.text_edit.document().firstBlock()
-        while block.isValid():
-            yield block.layout()
-            block = block.next()
+    @property
+    def doc_layouts(self) -> Generator[QTextLayout, None, None]:
+        yield from self.get_doc_layouts(self.text_edit)
 
     def test_demo(self):
         """Small sample, mostly for manual testing."""
@@ -75,13 +68,10 @@ outcome = test(5)""")
             (1, 1),  # '=' + 5
         ]
 
-        with self.bot.waitExposed(self.text_edit):
-            pass
-
         def check():
             actual_ranges = [
                 tuple(fmt_ranges.length for fmt_ranges in layout.formats())
-                for layout in self.get_doc_layouts()
+                for layout in self.doc_layouts
             ]
             assert actual_ranges == expected_format_ranges
 
@@ -92,9 +82,6 @@ outcome = test(5)""")
 
         content = 'return 99 + my_var + str("1234")'
         self.text_edit.setPlainText(content)
-
-        with self.bot.waitExposed(self.text_edit):
-            pass
 
         qt_styles = self.highlighter.formatter.qt_styles
 
@@ -119,7 +106,7 @@ outcome = test(5)""")
         ]
 
         def check():
-            layout = next(self.get_doc_layouts())
+            layout = next(self.doc_layouts)
             actual_formats = [
                 (
                     content[fmt.start : (fmt.start + fmt.length)],
@@ -138,15 +125,11 @@ outcome = test(5)""")
 
         cursor = self.text_edit.textCursor()
         cursor.movePosition(QTextCursor.End)
-        block = cursor.block()
-        block.setUserData(NoHighlightData())
+        HighlightKind.PLAIN.add_as_user_data(cursor)
         cursor.insertText(message)
 
-        with self.bot.waitExposed(self.text_edit):
-            pass
-
         def check_1():
-            fmt_ranges = [len(layout.formats()) for layout in self.get_doc_layouts()]
+            fmt_ranges = [len(layout.formats()) for layout in self.doc_layouts]
             assert fmt_ranges == [0]
 
         self.bot.waitUntil(check_1)
@@ -154,7 +137,7 @@ outcome = test(5)""")
         self.text_edit.appendPlainText("print('Hello World!')")
 
         def check_2():
-            fmt_ranges = [len(layout.formats()) for layout in self.get_doc_layouts()]
+            fmt_ranges = [len(layout.formats()) for layout in self.doc_layouts]
             assert fmt_ranges == [0, 2]
 
         self.bot.waitUntil(check_2)

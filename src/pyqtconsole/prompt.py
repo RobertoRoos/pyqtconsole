@@ -60,7 +60,7 @@ class PromptArea(QWidget):
         for index, length, fmt in self.highlighter.highlight(text):
             formats[index : index + length] = [fmt] * length
 
-        for idx, (_char, fmt) in enumerate(zip(text, formats)):
+        for idx, (_char, fmt) in enumerate(zip(text, formats, strict=True)):
             rpos = len(text) - idx - 1
             pen.setColor(fmt.foreground().color())
             painter.setPen(pen)
