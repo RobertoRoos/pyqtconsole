@@ -3,9 +3,10 @@ import subprocess
 import threading
 from abc import abstractmethod
 
+from pygments.style import Style
 from qtpy.QtCore import QEvent, Qt, QThread, Slot
 from qtpy.QtGui import QClipboard, QFontMetrics, QTextCursor
-from qtpy.QtWidgets import QApplication, QFrame, QHBoxLayout, QPlainTextEdit
+from qtpy.QtWidgets import QApplication, QFrame, QHBoxLayout, QPlainTextEdit, QWidget
 
 from .autocomplete import COMPLETE_MODE, AutoComplete
 from .commandhistory import CommandHistory
@@ -38,19 +39,17 @@ class BaseConsole(QFrame):
 
     def __init__(
         self,
-        parent=None,
-        formats=None,
-        shell_cmd_prefix=False,
-        inprompt=None,
-        outprompt=None,
-        welcome_message=None,
+        parent: QWidget | None = None,
+        formats: dict | None = None,
+        shell_cmd_prefix: bool | str = False,
+        inprompt: str | None = None,
+        outprompt: str | None = None,
+        welcome_message: str | None = None,
     ):
         """
 
         :param parent: Parent widget (Defaults to None)
-        :type parent: QWidget, None
         :param formats: Dictionary of text formats (Defaults to None)
-        :type formats: dict, None
         :param shell_cmd_prefix: Prefix for shell commands (Defaults to False)
                 If set, commands starting with this prefix will be treated
                 as system commands and executed using subprocess.
@@ -60,19 +59,15 @@ class BaseConsole(QFrame):
                 For example, if set to True, entering ``!ls -l`` will execute the
                 command ``ls -l`` in the system shell and display its output in
                 the console.
-        :type shell_cmd_prefix: bool, str
         :param inprompt: Input prompt (Defaults to None)
                 If None, then 'IN [%d]: ' is used, where `%d` is formatted after
                 the current input line number.
-        :type inprompt: str, None
         :param outprompt: Output prompt (Defaults to None)
                 If None, then 'OUT[%d]: ' is used, where `%d` is formatted after
                 the current input line number.
-        :type outprompt: str, None
         :param welcome_message: Welcome message to display at startup
                 (Defaults to None). If provided, this message will be
                 displayed before the first prompt. Not syntax highlighted.
-        :type welcome_message: str, None
         """
         super().__init__(parent)
 
@@ -756,14 +751,19 @@ class PythonConsole(BaseConsole):
 
     def __init__(
         self,
-        parent=None,
-        locals=None,
-        formats=None,
-        shell_cmd_prefix=False,
-        inprompt=None,
-        outprompt=None,
-        welcome_message=None,
+        parent: QWidget | None = None,
+        style: str | Style | type[Style] | None = None,
+        locals: dict | None = None,
+        formats: dict | None = None,
+        shell_cmd_prefix: bool | str = False,
+        inprompt: str | None = None,
+        outprompt: str | None = None,
+        welcome_message: str | None = None,
     ):
+        """See ``BaseConsole()`` for further signature details.
+
+        :param style: Name of a style defined in Pygments to use.
+        """
         super().__init__(
             parent,
             formats=formats,
@@ -779,6 +779,7 @@ class PythonConsole(BaseConsole):
 
         self.highlighter = PythonHighlighter(
             self.edit.document(),
+            style=style,
             # formats=formats,
             # shell_cmd_prefix=self.shell_cmd_prefix,
         )

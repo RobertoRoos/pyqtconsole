@@ -49,11 +49,17 @@ class HighlightUserData(QTextBlockUserData):
 class QtFormatter(Formatter):
     """A custom Pygments formatter for Qt.
 
+    In the Pygments context a formatter handles the conversion of a token stream
+    into formatted text.
+
     We cannot rely on the `format()` callback as intended, so a custom callback
     is used that works better in Qt.
     """
 
     def __init__(self, syntax_highlighter: "PythonHighlighter", **kwargs):
+        if kwargs.get("style", False) is None:
+            kwargs.pop("style")  # style=None breaks the parent constructor
+
         super().__init__(**kwargs)
         self.highlighter = syntax_highlighter
         self.qt_styles: QtStyleDict = dict(self.make_qt_styles(self.style))
@@ -157,10 +163,10 @@ class PythonHighlighter(QSyntaxHighlighter):
     The heavy lifting is done by the sister class, `QtFormatter`.
     """
 
-    def __init__(self, document: QTextDocument):
+    def __init__(self, document: QTextDocument, **kwargs):
         super().__init__(document)
         self.lexer = PythonLexer()
-        self.formatter = QtFormatter(self)
+        self.formatter = QtFormatter(self, **kwargs)
 
     def highlightBlock(self, text: str) -> None:
         """Callback from QSyntextHighlighter to format some text."""
