@@ -17,10 +17,12 @@ class ConsoleTestCase(QtTestCase):
 
     console: PythonConsole
 
+    _last_output: str  # Internal variable for the result new output in the console
+
     @pytest.fixture(autouse=True)
     def _console(self, request, _qt_bot) -> Generator[PythonConsole, None, None]:
         if "no_console" in request.keywords:
-            yield None
+            yield None  # type: ignore
             return  # Explicitly skipped
 
         self.console = PythonConsole()
@@ -42,23 +44,31 @@ class ConsoleTestCase(QtTestCase):
         :param ignore_exception: If `True`, don't mind errors in the console output
         """
         line_before = self.console._current_line
+        content_size_before = len(self.console.edit.toPlainText())
         try:
             yield None
         finally:
             self.bot.waitUntil(lambda: self.console._current_line > line_before)
 
+            self._last_output = self.console.edit.toPlainText()[content_size_before:]
+
             if not ignore_exception:
-                content = self.console.edit.toPlainText()
                 bad_words = ("Traceback", "Error", "Exception")
-                assert not any(w in content for w in bad_words), (
-                    "Unexpected exception in console output:\n" + content
+                assert not any(w in self._last_output for w in bad_words), (
+                    "Unexpected exception in console output:\n" + self._last_output
                 )
 
-    def submit_and_wait(self, text: str, **kwargs):
-        """Enter some text into the prompt, hit [Enter] and wait the output."""
+    def submit_and_wait(self, text: str, **kwargs) -> str:
+        """Enter some text into the prompt, hit [Enter] and wait the output.
+
+        Any new content will be returned.
+        """
         with self.wait_for_output(**kwargs):
             self.console.edit.insertPlainText(text)
             self.hit_enter()
+
+        # Also skip the input itself and the one extra new-line (and final 2 lns):
+        return self._last_output[len(text) + 1 : -2]
 
     def hit_enter(self):
         """Trigger of hitting the [Enter] key inside the prompt."""
@@ -86,13 +96,21 @@ class TestConsoleBasics(ConsoleTestCase):
     def test_multibyte_characters(self):
         """Check that e.g. emojis are handled correctly."""
         self.submit_and_wait("my_text = '😎'")
-        self.submit_and_wait("print(my_text)")
-
-        lines = self.console.edit.toPlainText().splitlines()
-        assert lines[-2].strip() == "😎"
+        result = self.submit_and_wait("print(my_text)")
+        assert result == "😎"
 
         # Now make sure no weird syntax errors occur:
         self.submit_and_wait("import sys")
+
+    def test_syntax_error(self):
+        """Check what happens after an error is made in the input."""
+        result = self.submit_and_wait("a = 1 + 'x'", ignore_exception=True)
+        assert all(word in result for word in ("TypeError", "Traceback"))
+
+        # Make sure the console is still functional:
+        self.submit_and_wait("a = 1 + 2")
+        result = self.submit_and_wait("print(a)")
+        assert result == "3"
 
 
 class TestConsoleHighlighting(ConsoleTestCase):
