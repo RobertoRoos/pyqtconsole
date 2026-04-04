@@ -45,6 +45,11 @@ class TestHighlighting(QtTestCase):
     def doc_layouts(self) -> Generator[QTextLayout, None, None]:
         yield from self.get_doc_layouts(self.text_edit)
 
+    @property
+    def formatting_ranges(self) -> list[list[int]]:
+        """Get a list of list for formatting rule ranges."""
+        return [[fmt.length for fmt in layout.formats()] for layout in self.doc_layouts]
+
     def test_demo(self):
         """Small sample, mostly for manual testing."""
 
@@ -58,22 +63,18 @@ def test(my_arg: int = 0):
 outcome = test(5)""")
 
         expected_format_ranges = [
-            (17,),  # <comment>
-            (3, 4, 3, 1, 1),  # def + test + int + '=' + 0
-            (14,),  # <comment>
-            (1, 13),  # '=' + "hello world"
-            (1, 1, 3),  # '=' + '+' + 420
-            (6,),  # return
-            (),
-            (1, 1),  # '=' + 5
+            [17],  # <comment>
+            [3, 4, 3, 1, 1],  # def + test + int + '=' + 0
+            [14],  # <comment>
+            [1, 13],  # '=' + "hello world"
+            [1, 1, 3],  # '=' + '+' + 420
+            [6],  # return
+            [],
+            [1, 1],  # '=' + 5
         ]
 
         def check():
-            actual_ranges = [
-                tuple(fmt_ranges.length for fmt_ranges in layout.formats())
-                for layout in self.doc_layouts
-            ]
-            assert actual_ranges == expected_format_ranges
+            assert self.formatting_ranges == expected_format_ranges
 
         self.bot.waitUntil(check)
 
@@ -137,7 +138,28 @@ outcome = test(5)""")
         self.text_edit.appendPlainText("print('Hello World!')")
 
         def check_2():
-            fmt_ranges = [len(layout.formats()) for layout in self.doc_layouts]
-            assert fmt_ranges == [0, 2]
+            fmt_counts = [len(layout.formats()) for layout in self.doc_layouts]
+            assert fmt_counts == [0, 2]
 
         self.bot.waitUntil(check_2)
+
+    def test_emojis(self):
+        """Test formatting including multi-byte characters."""
+
+        content = """
+def my_func():
+    var = "😎"
+    return "Smiley: " + var"""
+        self.text_edit.setPlainText(content)
+
+        expected_format_ranges = [
+            [],
+            [3, 7],  # def + my_func
+            [1, 3],  # '=' + string literal
+            [6, 10, 1],  # return + string literal + '+'
+        ]
+
+        def check():
+            assert self.formatting_ranges == expected_format_ranges
+
+        self.bot.waitUntil(check)
