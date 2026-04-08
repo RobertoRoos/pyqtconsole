@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Any
 
 from pygments.formatter import Formatter
-from pygments.lexers import PythonLexer, PythonTracebackLexer
+from pygments.lexers import PythonLexer
 from pygments.style import StyleMeta
 from pygments.token import Token, _TokenType, string_to_tokentype
 from qtpy.QtGui import (
@@ -163,9 +163,14 @@ class PythonHighlighter(QSyntaxHighlighter):
     The heavy lifting is done by the sister class, `QtFormatter`.
     """
 
-    def __init__(self, document: QTextDocument, **kwargs):
+    def __init__(
+        self, document: QTextDocument, shell_cmd_prefix: str | None = None, **kwargs
+    ):
         super().__init__(document)
         self.lexer = PythonLexer()
+
+        self.shell_cmd_prefix = shell_cmd_prefix
+
         # self.lexer_traceback = PythonTracebackLexer()  # Part of #112
         self.formatter = QtFormatter(self, **kwargs)
 
@@ -178,6 +183,12 @@ class PythonHighlighter(QSyntaxHighlighter):
         )
         if kind == HighlightKind.PLAIN:
             return  # No formatting at all here
+
+        if self.shell_cmd_prefix and text.startswith(self.shell_cmd_prefix):
+            # A pygments `Filter` sounds appropriate for this, but that is post-token
+            # conversion, so instead we do the shell prefix filtering ourselves:
+            self.formatter.format_highlighter(0, Token.Generic.Prompt, text)
+            return
 
         # Choose the regular or 'error-lexer':
         # lexer = self.lexer_traceback if kind == HighlightKind.ERROR else self.lexer

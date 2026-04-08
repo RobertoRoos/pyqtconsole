@@ -19,6 +19,13 @@ class ConsoleTestCase(QtTestCase):
 
     _last_output: str  # Internal variable for the result new output in the console
 
+    def make_console(self, **kwargs) -> None:
+        """Centralized method of creating a console instance."""
+        self.console = PythonConsole(**kwargs)
+        self.bot.add_widget(self.console)
+        self.console.show()
+        self.console.eval_in_thread()
+
     @pytest.fixture(autouse=True)
     def _console(self, request, _qt_bot) -> Generator[PythonConsole, None, None]:
         if "no_console" in request.keywords:
@@ -138,6 +145,23 @@ class TestConsoleHighlighting(ConsoleTestCase):
         fmt_counts = [len(layout.formats()) for layout in self.doc_layouts]
         assert fmt_counts == [2, 0, 0]
 
+    @pytest.mark.no_console
+    @pytest.mark.parametrize("shell_cmd_prefix", [False, True])
+    def test_shell_command(self, shell_cmd_prefix):
+        """Check if a shell command is being escaped from the highlight."""
+        self.make_console(shell_cmd_prefix=shell_cmd_prefix)
+        self.console.edit.insertPlainText("!return 'x'")
+
+        def check():
+            fmts = next(self.doc_layouts).formats()
+            if shell_cmd_prefix:
+                assert len(fmts) == 1  # Make sure this is not formatted for Python
+                assert fmts[0].length == 11
+            else:
+                assert len(fmts) == 2
+
+        self.bot.waitUntil(check)
+
 
 @pytest.mark.no_console
 class TestStyles(ConsoleTestCase):
@@ -164,9 +188,7 @@ class TestStyles(ConsoleTestCase):
     )
     def test_other_styles(self, style, class_hex_color):
         """Test how a particular color changes across multiple styles."""
-        self.console = PythonConsole(style=style)
-        self.bot.add_widget(self.console)
-        self.console.show()
+        self.make_console(style=style)
 
         self.console.edit.insertPlainText("class MyClass: ...")
 

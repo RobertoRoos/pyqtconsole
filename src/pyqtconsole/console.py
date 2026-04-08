@@ -783,7 +783,7 @@ class PythonConsole(BaseConsole):
             self.edit.document(),
             style=style,
             # formats=formats,
-            # shell_cmd_prefix=self.shell_cmd_prefix,
+            shell_cmd_prefix=self.shell_cmd_prefix,
         )
         self.interpreter = PythonInterpreter(self.stdin, self.stdout, locals=locals)
         self.interpreter.done_signal.connect(self._finish_command)
