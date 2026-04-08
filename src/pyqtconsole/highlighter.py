@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Any
 
 from pygments.formatter import Formatter
-from pygments.lexers import PythonLexer
+from pygments.lexers import PythonLexer, PythonTracebackLexer
 from pygments.style import StyleMeta
 from pygments.token import Token, _TokenType, string_to_tokentype
 from qtpy.QtGui import (
@@ -166,15 +166,21 @@ class PythonHighlighter(QSyntaxHighlighter):
     def __init__(self, document: QTextDocument, **kwargs):
         super().__init__(document)
         self.lexer = PythonLexer()
+        # self.lexer_traceback = PythonTracebackLexer()  # Part of #112
         self.formatter = QtFormatter(self, **kwargs)
 
     def highlightBlock(self, text: str) -> None:
         """Callback from QSyntextHighlighter to format some text."""
-        if (
-            isinstance(user_data := self.currentBlockUserData(), HighlightUserData)
-            and user_data.kind == HighlightKind.PLAIN
-        ):
+        kind = (
+            data.kind
+            if isinstance(data := self.currentBlockUserData(), HighlightUserData)
+            else HighlightKind.REGULAR
+        )
+        if kind == HighlightKind.PLAIN:
             return  # No formatting at all here
+
+        # Choose the regular or 'error-lexer':
+        # lexer = self.lexer_traceback if kind == HighlightKind.ERROR else self.lexer
 
         # We rely on `get_tokens_unprocessed()`, because that one also passes along
         # the string position, unlike the intended entrypoint `pygments.highlight()`.

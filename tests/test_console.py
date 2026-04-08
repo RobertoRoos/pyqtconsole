@@ -116,14 +116,27 @@ class TestConsoleBasics(ConsoleTestCase):
 class TestConsoleHighlighting(ConsoleTestCase):
     """Integration tests focussing on formatting."""
 
+    @pytest.mark.skip(reason="Issue #112 hasn't been tackled yet")
     def test_syntax_in_output(self):
         """Make sure console output isn't being formatted."""
         # Print a complicated string including Python syntax:
         self.submit_and_wait("print(\"return 'hi!'\\ndef my_func(x): ...\")")
 
-        fmt_ranges = [len(layout.formats()) for layout in self.doc_layouts]
-        assert fmt_ranges == [4, 0, 0, 0, 0]
+        fmt_counts = [len(layout.formats()) for layout in self.doc_layouts]
+        assert fmt_counts == [4, 0, 0, 0, 0]
         # The input has two format groups, make sure the output has none
+
+    @pytest.mark.skip(reason="Issue #112 hasn't been tackled yet")
+    def test_errors(self):
+        """Test how error text is highlighted."""
+        # self.submit_and_wait("import non_existing_module", ignore_exception=True)
+        # Cause an exception including syntax keywords:
+        self.submit_and_wait(
+            "raise ValueError(\"return 'hi!'\")", ignore_exception=True
+        )
+
+        fmt_counts = [len(layout.formats()) for layout in self.doc_layouts]
+        assert fmt_counts == [2, 0, 0]
 
 
 @pytest.mark.no_console

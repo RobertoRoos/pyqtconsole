@@ -474,7 +474,11 @@ class BaseConsole(QFrame):
 
         cursor = self._textCursor()
         cursor.movePosition(QTextCursor.End)
-        HighlightKind.PLAIN.add_as_user_data(cursor)
+
+        # Potential fix for #112:
+        # kind = HighlightKind.ERROR if is_error else HighlightKind.PLAIN
+        # lines = text.splitlines()
+        # kind.add_as_user_data(cursor)
         cursor.insertText(text)
         self._prompt_pos = cursor.position()
         self.ensureCursorVisible()
@@ -524,9 +528,7 @@ class BaseConsole(QFrame):
 
         # Update prompt area for the welcome message lines
         # Insert empty strings for each line of the welcome message
-        newline_count = len(lines)
-
-        self._insert_prompt_text("\n" * newline_count)
+        self._insert_prompt_text("\n" * len(lines))
 
         self._output_inserted = True
 
