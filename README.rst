@@ -82,31 +82,60 @@ Features
 Customizing syntax highlighting
 -------------------------------
 
-The coloring of the syntax highlighting can be customized by passing a
-``formats`` dictionary to the ``PythonConsole`` constructer. This dictionary
-must be shaped as follows:
+Syntax highlighting is done through `Pygments <https://pygments.org/>`__.
+The default style is, predictably, ``default``.
+You can either provide a different `built-in style <https://pygments.org/styles/>`__ from Pygments by name or provide a `(custom) style class <https://pygments.org/docs/styledevelopment/>`__:
 
 .. code-block:: python
 
+   from pyqtconsole.console import PythonConsole
+
+
+   console = PythonConsole(style="staroffice")
+
+.. code-block:: python
+
+   from pyqtconsole.console import PythonConsole
+   from pygments.style import Style
+   from pygments.token import Token
+
+
+   class MyStyle(Style):
+
+       styles = {
+           Token.Keyword: "italic #ffff00",
+       }
+
+   console = PythonConsole(style=MyStyle)
+
+
+Legacy
+......
+
+The previous style of the ``pyqtconsole`` is also still available, as a Pygments style:
+
+.. code-block:: python
+
+   from pyqtconsole.console import PythonConsole
+   from pyqtconsole.highlighter_legacy import OldPyqtconsoleStyle
+
+
+   console = PythonConsole(style=OldPyqtconsoleStyle)
+
+Coloring used to be done through a custom ``formats`` dictionary.
+For backwards compatibility this is still possible, although a deprecation warning will be shown:
+
+.. code-block:: python
+
+    import pyqtconsole import console
     import pyqtconsole.highlighter as hl
+
+
     console = PythonConsole(formats={
-        'keyword':    hl.format('blue', 'bold'),
-        'operator':   hl.format('red'),
-        'brace':      hl.format('darkGray'),
-        'defclass':   hl.format('black', 'bold'),
-        'string':     hl.format('magenta'),
-        'string2':    hl.format('darkMagenta'),
-        'comment':    hl.format('darkGreen', 'italic'),
-        'self':       hl.format('black', 'italic'),
-        'numbers':    hl.format('brown'),
-        'inprompt':   hl.format('darkBlue', 'bold'),
-        'outprompt':  hl.format('darkRed', 'bold'),
-        'fstring':    hl.format('darkCyan', 'bold'),
-        'escape':     hl.format('darkorange', 'bold'),
-        'shellcmd':   hl.format(None, 'bold'),
+        'keyword': hl.format('yello', 'italic'),
     })
 
-All keys are optional and default to the value shown above if left unspecified.
+Internally a new Pygments ``Style`` will be fabricated first.
 
 Clear console
 -------------
