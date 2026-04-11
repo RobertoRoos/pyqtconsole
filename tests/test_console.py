@@ -227,8 +227,6 @@ class TestStyles(ConsoleTestCase):
 
         self.console.edit.setPlainText("return 'hi there'")
 
-        self.bot.wait(100)
-
         def check():
             fmts = next(self.doc_layouts).formats()
             assert len(fmts) == 2

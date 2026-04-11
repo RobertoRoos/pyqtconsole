@@ -2,6 +2,7 @@ import ctypes
 import subprocess
 import threading
 from abc import abstractmethod
+from warnings import warn
 
 from pygments.style import Style
 from qtpy.QtCore import QEvent, Qt, QThread, Slot
@@ -15,6 +16,7 @@ from .highlighter import (
     PromptHighlighter,
     PythonHighlighter,
 )
+from .highlighter_legacy import FormatsStyleBase
 from .interpreter import PythonInterpreter
 from .prompt import PromptArea
 from .stream import Stream
@@ -40,6 +42,7 @@ class BaseConsole(QFrame):
     def __init__(
         self,
         parent: QWidget | None = None,
+        style: str | Style | type[Style] | None = None,
         formats: dict | None = None,
         shell_cmd_prefix: bool | str = False,
         inprompt: str | None = None,
@@ -49,6 +52,7 @@ class BaseConsole(QFrame):
         """
 
         :param parent: Parent widget (Defaults to None)
+        :param style: Name of a style defined in Pygments to use or style class
         :param formats: Dictionary of text formats (Defaults to None)
         :param shell_cmd_prefix: Prefix for shell commands (Defaults to False)
                 If set, commands starting with this prefix will be treated
@@ -71,18 +75,22 @@ class BaseConsole(QFrame):
         """
         super().__init__(parent)
 
-        self.edit = edit = InputArea()
-        self.pbar = pbar = PromptArea(
-            edit,
-            self._get_prompt_text,
-            PromptHighlighter(
-                # formats=formats
-            ),
-        )
+        if formats is not None:
+            msg = "Use the new Pygments `style` instead of a formats dictionary"
+            warn(msg, DeprecationWarning, stacklevel=3)
+            # ^ '3' should point to the console constructor
+            style = FormatsStyleBase.create_from_formats(formats)
+
+        self.style = style
+
+        self.edit = InputArea()
+
+        prompt_highlighter = PromptHighlighter(style=self.style)
+        self.pbar = PromptArea(self.edit, self._get_prompt_text, prompt_highlighter)
 
         layout = QHBoxLayout()
-        layout.addWidget(pbar)
-        layout.addWidget(edit)
+        layout.addWidget(self.pbar)
+        layout.addWidget(self.edit)
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
@@ -117,30 +125,30 @@ class BaseConsole(QFrame):
         self.stdout.write_event.connect(self._stdout_data_handler)
 
         # show frame around both child widgets:
-        self.setFrameStyle(edit.frameStyle())
-        edit.setFrameStyle(QFrame.NoFrame)
+        self.setFrameStyle(self.edit.frameStyle())
+        self.edit.setFrameStyle(QFrame.NoFrame)
 
-        font = edit.document().defaultFont()
+        font = self.edit.document().defaultFont()
         font.setFamily("Courier New")
         font_width = QFontMetrics(font).width("M")
         self.setFont(font)
 
-        geometry = edit.geometry()
+        geometry = self.edit.geometry()
         geometry.setWidth(font_width * 80 + 20)
         geometry.setHeight(font_width * 40)
-        edit.setGeometry(geometry)
-        edit.resize(font_width * 80 + 20, font_width * 40)
+        self.edit.setGeometry(geometry)
+        self.edit.resize(font_width * 80 + 20, font_width * 40)
 
-        edit.setReadOnly(True)
-        edit.setTextInteractionFlags(
+        self.edit.setReadOnly(True)
+        self.edit.setTextInteractionFlags(
             Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard
         )
         self.setFocusPolicy(Qt.NoFocus)
-        pbar.setFocusPolicy(Qt.NoFocus)
-        edit.setFocusPolicy(Qt.StrongFocus)
-        edit.setFocus()
+        self.pbar.setFocusPolicy(Qt.NoFocus)
+        self.edit.setFocusPolicy(Qt.StrongFocus)
+        self.edit.setFocus()
 
-        edit.installEventFilter(self)
+        self.edit.installEventFilter(self)
         self._key_event_handlers = self._get_key_event_handlers()
 
         self.command_history = CommandHistory(self)
@@ -762,12 +770,10 @@ class PythonConsole(BaseConsole):
         outprompt: str | None = None,
         welcome_message: str | None = None,
     ):
-        """See ``BaseConsole()`` for further signature details.
-
-        :param style: Name of a style defined in Pygments to use.
-        """
+        """See ``BaseConsole()`` for further signature details."""
         super().__init__(
             parent,
+            style=style,
             formats=formats,
             shell_cmd_prefix=shell_cmd_prefix,
             inprompt=inprompt,
@@ -781,8 +787,7 @@ class PythonConsole(BaseConsole):
 
         self.highlighter = PythonHighlighter(
             self.edit.document(),
-            style=style,
-            formats=formats,
+            style=self.style,
             shell_cmd_prefix=self.shell_cmd_prefix,
         )
         self.interpreter = PythonInterpreter(self.stdin, self.stdout, locals=locals)

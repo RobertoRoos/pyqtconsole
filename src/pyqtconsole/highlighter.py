@@ -6,7 +6,7 @@ from warnings import warn
 
 from pygments.formatter import Formatter
 from pygments.lexers import PythonLexer
-from pygments.style import StyleMeta
+from pygments.style import Style, StyleMeta
 from pygments.token import Token, _TokenType
 from qtpy.QtGui import (
     QColor,
@@ -18,7 +18,6 @@ from qtpy.QtGui import (
     QTextDocument,
 )
 
-from pyqtconsole.highlighter_legacy import FormatsStyleBase
 from pyqtconsole.prompt import TokenInPrompt, TokenOutPrompt
 
 StyleDict = dict[_TokenType, Any]
@@ -80,12 +79,6 @@ class QtFormatter(Formatter):
     """
 
     def __init__(self, syntax_highlighter: "PythonHighlighter", **kwargs):
-        if (formats_dict := kwargs.pop("formats", None)) is not None:
-            msg = "Use the new Pygments `style` instead of a formats dictionary"
-            warn(msg, DeprecationWarning, stacklevel=3)
-            # ^ '3' should point to the console constructor
-            kwargs["style"] = FormatsStyleBase.create_from_formats(formats_dict)
-
         if kwargs.get("style", False) is None:
             kwargs.pop("style")  # style=None breaks the parent constructor
 
@@ -239,9 +232,7 @@ class PromptHighlighter:
     This has no real ties to Pygments, though we use their token classes for symmetry.
     """
 
-    STYLE = {}
-
-    def __init__(self):
+    def __init__(self, style: str | Style | type[Style] | None = None):
         self.rules: dict[_TokenType, tuple[re.Pattern[str], int]] = {
             # Match the prompt numbering of a console:
             TokenInPrompt: (re.compile(r"IN[^:]*"), 0),
@@ -249,36 +240,12 @@ class PromptHighlighter:
             Token.Literal.Number: (re.compile(r"\b[+-]?[0-9]+\b"), 0),
         }  # Values are like: ( <regex>, <relevant match group> )
 
-        if not self.STYLE:
-            self.STYLE = self._create_style()
+        # We don't need a full formatter, but it's a convient wrapper for a `Style`:
+        self.formatter = QtFormatter(syntax_highlighter=None, style=style)  # type: ignore
 
     def highlight(self, text):
         for token_type, (expression, match_idx) in self.rules.items():
-            fmt = self.STYLE[token_type]
-            for m in expression.finditer(text):
-                yield m.start(match_idx), m.end(match_idx) - m.start(match_idx), fmt
-
-    @classmethod
-    def _create_style(cls):
-        return {
-            TokenInPrompt: cls.make_format("darkBlue", bold=True),
-            TokenOutPrompt: cls.make_format("darkRed", bold=True),
-            Token.Literal.Number: cls.make_format("brown"),
-        }
-
-    @staticmethod
-    def make_format(
-        color: Any = None, bold: bool = False, italic: bool = False
-    ) -> QTextCharFormat:
-        """Factory function for a Qt text format."""
-        fmt = QTextCharFormat()
-        if color:
-            fmt.setForeground(QColor(color))
-
-        if bold:
-            fmt.setFontWeight(QFont.Bold)
-
-        if italic:
-            fmt.setFontItalic(True)
-
-        return fmt
+            fmt = self.formatter.qt_styles.get(token_type)
+            if fmt:
+                for m in expression.finditer(text):
+                    yield m.start(match_idx), m.end(match_idx) - m.start(match_idx), fmt
