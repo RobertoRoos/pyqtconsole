@@ -2,7 +2,7 @@ import re
 from collections.abc import Generator
 from enum import Enum
 from typing import Any
-from warnings import deprecated, warn
+from warnings import warn
 
 from pygments.formatter import Formatter
 from pygments.lexers import PythonLexer
@@ -50,12 +50,13 @@ class HighlightUserData(QTextBlockUserData):
         self.kind = kind
 
 
-@deprecated("Use the new Pygments based `style` instead")
 def format(color: str | None, style: str = "") -> QTextCharFormat:
     """Return a QTextCharFormat with the given attributes.
 
     :deprecated: This function is kept for compatibility but should not be used anymore
     """
+    # @deprecation(...) is nicer but doesn't exist pre 3.13
+    warn("Use the new Pygments based `style` instead", DeprecationWarning, stacklevel=2)
     _format = QTextCharFormat()
     if color is not None:
         _color = QColor(color)
