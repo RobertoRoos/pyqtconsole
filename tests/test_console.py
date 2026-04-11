@@ -4,12 +4,15 @@ from contextlib import contextmanager
 import pytest
 from pygments.style import Style
 from pygments.styles import get_style_by_name
+from pygments.styles.xcode import XcodeStyle
 from pygments.token import Token
 from qtpy.QtCore import Qt
-from qtpy.QtGui import QTextLayout
+from qtpy.QtGui import QFont, QTextLayout
 from utils import QtTestCase
 
+import pyqtconsole.highlighter as hl
 from pyqtconsole.console import PythonConsole
+from pyqtconsole.highlighter_legacy import OldPyqtconsoleStyle
 
 
 class ConsoleTestCase(QtTestCase):
@@ -182,9 +185,10 @@ class TestStyles(ConsoleTestCase):
             (None, "#008000"),
             ("xcode", "#A90D91"),
             (get_style_by_name("sas"), "#2c2cff"),
+            (XcodeStyle, "#A90D91"),  # <- class, instances are not allowed!
             (CustomStyle, "#FFFF00"),
-            # Color codes for the "class" Python keyword, taken from pygments.styles
-        ],
+            (OldPyqtconsoleStyle, "#0000ff"),
+        ],  # Color codes for the "class" Python keyword, taken from pygments.styles
     )
     def test_other_styles(self, style, class_hex_color):
         """Test how a particular color changes across multiple styles."""
@@ -198,3 +202,45 @@ class TestStyles(ConsoleTestCase):
         assert actual_color.name().lower() == class_hex_color.lower()
         # A little convoluted, but this is a very complete method of asserting the
         # style effect
+
+    def test_old_formats(self):
+        """Verify compatibility with the old interface."""
+        with pytest.deprecated_call():
+            dict_formats = {
+                "keyword": hl.format("blue", "bold"),
+                "operator": hl.format("red"),
+                "brace": hl.format("darkGray"),
+                "defclass": hl.format("black", "bold"),
+                "string": hl.format("magenta"),
+                "string2": hl.format("darkMagenta"),
+                "comment": hl.format("darkGreen", "italic"),
+                "self": hl.format("black", "italic"),
+                "numbers": hl.format("brown"),
+                "inprompt": hl.format("darkBlue", "bold"),
+                "outprompt": hl.format("darkRed", "bold"),
+                "fstring": hl.format("darkCyan", "bold"),
+                "escape": hl.format("darkorange", "bold"),
+                "shellcmd": hl.format(None, "bold"),
+            }
+        with pytest.warns():
+            self.make_console(formats=dict_formats)
+
+        self.console.edit.setPlainText("return 'hi there'")
+
+        self.bot.wait(100)
+
+        def check():
+            fmts = next(self.doc_layouts).formats()
+            assert len(fmts) == 2
+
+            fmt_0 = fmts[0].format
+            assert fmt_0.fontWeight() == QFont.Bold
+            assert fmt_0.foreground().color().name().lower() == "#0000ff"
+            # Blue, not green!
+
+            fmt_1 = fmts[1].format
+            assert fmt_1.fontWeight() == QFont.Normal
+            assert fmt_1.foreground().color().name().lower() == "#ff00ff"
+            # Magenta, not orange-ish!
+
+        self.bot.waitUntil(check)

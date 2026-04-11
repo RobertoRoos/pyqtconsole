@@ -1,6 +1,11 @@
+from pygments.token import string_to_tokentype
 from qtpy.QtCore import QRect, Qt
 from qtpy.QtGui import QPainter
 from qtpy.QtWidgets import QWidget
+
+# Custom Tokens for our input and output prompts:
+TokenInPrompt = string_to_tokentype("Token.Generic.InPrompt")
+TokenOutPrompt = string_to_tokentype("Token.Generic.OutPrompt")
 
 
 class PromptArea(QWidget):

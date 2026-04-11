@@ -2,11 +2,12 @@ import re
 from collections.abc import Generator
 from enum import Enum
 from typing import Any
+from warnings import deprecated, warn
 
 from pygments.formatter import Formatter
 from pygments.lexers import PythonLexer
 from pygments.style import StyleMeta
-from pygments.token import Token, _TokenType, string_to_tokentype
+from pygments.token import Token, _TokenType
 from qtpy.QtGui import (
     QColor,
     QFont,
@@ -16,6 +17,9 @@ from qtpy.QtGui import (
     QTextCursor,
     QTextDocument,
 )
+
+from pyqtconsole.highlighter_legacy import FormatsStyleBase
+from pyqtconsole.prompt import TokenInPrompt, TokenOutPrompt
 
 StyleDict = dict[_TokenType, Any]
 QtStyleDict = dict[_TokenType, QTextCharFormat]
@@ -46,6 +50,24 @@ class HighlightUserData(QTextBlockUserData):
         self.kind = kind
 
 
+@deprecated("Use the new Pygments based `style` instead")
+def format(color: str | None, style: str = "") -> QTextCharFormat:
+    """Return a QTextCharFormat with the given attributes.
+
+    :deprecated: This function is kept for compatibility but should not be used anymore
+    """
+    _format = QTextCharFormat()
+    if color is not None:
+        _color = QColor(color)
+        _format.setForeground(_color)
+    if "bold" in style:
+        _format.setFontWeight(QFont.Bold)
+    if "italic" in style:
+        _format.setFontItalic(True)
+
+    return _format
+
+
 class QtFormatter(Formatter):
     """A custom Pygments formatter for Qt.
 
@@ -57,16 +79,27 @@ class QtFormatter(Formatter):
     """
 
     def __init__(self, syntax_highlighter: "PythonHighlighter", **kwargs):
+        if (formats_dict := kwargs.pop("formats", None)) is not None:
+            msg = "Use the new Pygments `style` instead of a formats dictionary"
+            warn(msg, DeprecationWarning, stacklevel=3)
+            # ^ '3' should point to the console constructor
+            kwargs["style"] = FormatsStyleBase.create_from_formats(formats_dict)
+
         if kwargs.get("style", False) is None:
             kwargs.pop("style")  # style=None breaks the parent constructor
 
         super().__init__(**kwargs)
+
+        if not isinstance(self.style, StyleMeta):
+            msg = "`style` parameter must be a `Style` (sub)class"
+            raise ValueError(msg)
+
         self.highlighter = syntax_highlighter
         self.qt_styles: QtStyleDict = dict(self.make_qt_styles(self.style))
 
     @classmethod
     def make_qt_styles(
-        cls, styles_class: StyleMeta
+        cls, style: StyleMeta
     ) -> Generator[tuple[_TokenType, QTextCharFormat], None, None]:
         """Convert standard Pygments style into one that's convenient for Qt.
 
@@ -74,11 +107,11 @@ class QtFormatter(Formatter):
         Instead of composing Qt-styles on the fly, we create a look-up table only once.
         """
         token: _TokenType
-        style: dict[str, Any]
-        for token, style in styles_class:
+        token_style: dict[str, Any]
+        for token, token_style in style:
             if token is Token.Text.Whitespace:
                 continue  # We won't bother explicitly marking all whitespace
-            qt_style = cls._make_qt_format_from_style(style)
+            qt_style = cls._make_qt_format_from_style(token_style)
             if qt_style is None:
                 continue
             yield token, qt_style
@@ -197,11 +230,6 @@ class PythonHighlighter(QSyntaxHighlighter):
         # the string position, unlike the intended entrypoint `pygments.highlight()`.
         for idx, token_type, content in self.lexer.get_tokens_unprocessed(text):
             self.formatter.format_highlighter(idx, token_type, content)
-
-
-# Custom Tokens for our input and output prompts:
-TokenInPrompt = string_to_tokentype("Token.Generic.InPrompt")
-TokenOutPrompt = string_to_tokentype("Token.Generic.OutPrompt")
 
 
 class PromptHighlighter:
